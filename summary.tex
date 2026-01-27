@@ -87,15 +87,6 @@ leftmargin=0mm,rightmargin=0mm,skipbelow=0mm,skipabove=0mm,
 	
 \begin{multicols*}{4}
 
-This document is a summary of the \textit{Reliable and Trustworthy Artificial Intelligence} course at ETH Z\"urich.
-This summary was created during the autumn semester of 2023.
-Due to updates to the syllabus content, some material may no longer be relevant for future versions of the course.
-I do not guarantee correctness or completeness, nor is this document endorsed by the lecturers.
-This draft cheatsheet exceeds the allowed number of pages for the exam, so make sure to cut it down to size.
-For the full \LaTeX \ source code, visit \texttt{\href{https://github.com/Jovvik/eth-cheatsheets}{github.com/Jovvik/eth-cheatsheets}}.
-
-\newpage
-	
 \extratext{
 \subsection{Abstract Interpretation}
 
@@ -123,15 +114,14 @@ Guarantees $\eta \in [-\epsilon, \epsilon]$, $\eta$ not minimized
 $\mathrm{obj}_t$ is s.t. $\mathrm{obj}_t(x') \leq 0 \Rightarrow f(x') = t$,
 e.g. \hl{$CE(x', t) - 1; \max(0, 0.5 - p_f(x')_t)$}
 
-Prior e.g. $x + \eta \in [0, 1]$: use specialized optimizer (LBFGS-B) or PGD.
-Optimizing $||\eta||_{\infty}$ is hard, use \(\mathrm{ReLU}(\sum |\eta_i| - \tau)\), lower \(\tau\) gradually.
-
 % \vspace*{1mm}
 
 %Project $\vec{\eta}$ on hypercube $[-\vec{x}, \vec{1}-\vec{x}]$.
 %$project() = (clip_1(\eta_1),...,clip_n(\eta_n))$
 
 \textbf{PGD:} Repeat FGSM with \(\epsilon_{\mathrm{step}}\) and proj. to \(x \pm \epsilon\).
+
+\textbf{Projection} \( z = x + (y - x) / \max \left( 1, \frac{\|y - x\|_p}{\epsilon} \right) \), where \(x\) is base and \(y\) is perturbed.
 
 \section{Adversarial Defenses}
 
@@ -168,14 +158,6 @@ Encode NN as MILP instance. Doesn't scale well.
 
 - $\mathrm{ReLU}(x)$: \mhl{$y \leq x - l_x \cdot (1-a)$, $y \geq x$, $y \leq u_x \cdot a$},
 \mhl{$y \geq 0$, $a \in \{0,1\}$}, for box bound $x \in [l,u]$.
-
-\begin{itemize}\labelwidth=4em
-	\item $a = 0$: $y = 0, x \in [l,0]$
-	\item $a = 1$: $y = x, y \in [0,u]$
-\end{itemize}
-
-\textul{To check an encoding} for \(f\), plot constraint regions for all cases of int. variables.
-They should match plot of \(f\). Can't use \(a \cdot x\).
 
 $\phi = \mathbb{B}^\infty_\epsilon(x)$: $x_i - \epsilon \leq x_i' \leq x_i + \epsilon, \forall i$\\
 precomp. Box bounds: $l_i \leq x_i^p \leq u_i$\\
@@ -259,18 +241,18 @@ certification radius \( = \delta / 2 (\Phi^{-1}(\underline{p_{A, x}}) - \Phi^{-1
 Calculating \(p_{A, x}, p_{B, x}\) directly is hard, so we use bounds.
 Calculating \(\overline{p_{B, x}}\) is also hard, so let's assume \(\underline{p_{A, x}} > 0.5\), then \(\overline{p_{B, x}} = 1 - \underline{p_{A, x}}\).
 
-\vspace*{-1mm}
-\begin{algorithmic}
-\State $\hat{c_A} \gets \texttt{guess\_top\_class}(f, \sigma, x, n_0)$
-\State $\underline{p_A} \gets \texttt{lower\_bound\_p}(\hat{c_A}, f, \sigma, x, n, \alpha)$
-\If{$\underline{p_A} > 0.5$} 
-    \State $R \gets \sigma \Phi^{-1}(\underline{p_A})$
-    \State \Return \(\hat{c_A} R\)
-\Else
-    \State \Return \texttt{ABSTAIN}
-\EndIf
-\end{algorithmic}
-\vspace*{-1mm}
+\begin{tabular}{l}
+\hline 
+\textbf{function} CERTIFY(f,$\sigma$,x,$n_0$,n,$\alpha$) \hfill \\
+\-\hspace{3mm} counts0 $\leftarrow$ SampleUnderNoise(f,x,$n_0$,$\sigma$) \hfill \\
+\-\hspace{3mm} $\hat{c}_A$ $\leftarrow$ top index in counts0 \hfill \\
+\-\hspace{3mm} counts $\leftarrow$ SampleUnderNoise(f,x,n,$\sigma$) \hfill \\
+\-\hspace{3mm} $\underline{p_a}$ $\leftarrow$ LowerConfBound(counts[$\hat{c}_A$],n,1-$\alpha$) \hfill \\
+\-\hspace{3mm} if $\underline{p_a} > \frac{1}{2}$: \hfill \\
+\-\hspace*{6mm} return prediction $\hat{c}_A$, radius $\sigma \phi^{-1}(\underline{p_A})$ \hfill \\
+\-\hspace{3mm} else: return ABSTAIN \hfill \\
+\hline 
+\end{tabular} 
 
 Top class is estimated via Monte-Carlo.
 Lower bound is estimated by CLT, Chebyshev's inequality or binomial confidence bounds.
@@ -299,8 +281,8 @@ Inference:
 
 \section{Privacy}
 
-Common attacks: Model Stealing, Model Extraction (representative inputs),
-Data Extraction (exact training samples), Membership Inference (find out if a sample was used for training).
+Model Stealing, Model Inversion(repr. inps),
+Data Extraction, Membership Inference
 
 Black-Box MI: Attacker trains many models on the same data distribution, some with entry \(x\), some without.
 If logits are given, then attacker trains a classifier to distinguish between the two cases.
@@ -341,7 +323,7 @@ Prior: the average of samples in one epoch is equal to that in another epoch.
 
 \subsection{Differential Privacy}
 
-MI protection is \mhl{\(\mathbb{P}({M}(\mathcal{D}) \in S) \approx \mathbb{P}({M}(\textcolor{blue}{\mathcal{D}}) \in S)\)}
+\mhl{\(\mathbb{P}({M}(\mathcal{D}) \in S) \approx \mathbb{P}({M}({\mathcal{D'}}) \in S)\)}
 
 \({M}\) is \(\varepsilon\)-DP if for all ``neighboring'' \((a, a')\)
 and for any attack \(S\)
@@ -374,88 +356,32 @@ The resulting model is private, even against a white-box attacker with any numbe
 Clipping is necessary to bound the sensitivity of the gradient.
 
 \textbf{Privacy Amplification}: Applying an \((\varepsilon, \delta)\)-DP mechanism on a random fraction
-\(q = L / N\) subset yields a \((\tilde{q}\varepsilon, q\delta)\)-DP mechanism, where \(\tilde{q} \approx q\).
+\(q = L / N\) subset yields a \((\tilde{q}\varepsilon, q\delta)\)-DP mechanism, \(\tilde{q} \approx q\).
 
-Due to clipping, sensitivity of the gradient for any point is \(C\).
-If \(T = 1\) and no subsampling is used, adding/removing a datapoint changes total gradient by at most \(C / L\).
-Then by the gaussian mechanism the resulting model is \(\varepsilon, \delta\)-DP.
-If subsampling is used, by privacy amplification, the model is \((\tilde{q}\varepsilon, q\delta)\)-DP.
-If \(T \neq 1\), by the composition theorem, the model is \((\tilde{q} T \varepsilon, q T \delta)\)-DP.
-By out of scope theorems, this is
-\((\mathcal{O}(q \varepsilon \sqrt{T \log \frac{1}{\delta}}), \mathcal{O}(qT\delta))\) and
-\((\mathcal{O}(q\varepsilon \sqrt{T}), \delta)\)-DP.
+By composition, \((\tilde{q} T \varepsilon, q T \delta)\)-DP.
 
-\textbf{PATE: Private Aggregation of Teacher Models}
+\textbf{PATE: Private Agg. of Teacher Models}
 
-Split data into disjoint partitions and train a model for each.
-Agreggate models via noisy voting into a teacher, which labels public unlabeled data,
-on which we train the final model.
+Split data into disjoint parts, train a model(teacher) for each.
+Agg. models via noisy voting, which labels public unlabeled data, on which we train the final model.
 
 \(T\) are teachers, \(n_j(x) \coloneqq |\{t(x) = j \mid t \in T\}|\).\\
-\(\arg\max(n_j(x)) + \mathrm{Lap}(0, \sigma)\) is bad, better
+Use
 \(\arg\max(n_j(x) + \mathrm{Lap}(0, 2 / \varepsilon))\).
 \(\Delta_1 = 2 \Rightarrow\) model is \((\varepsilon, 0)\)-DP for one query.
 Labeling \(T\) data points yields \((\varepsilon T, 0)\)-DP.
-But there are better bounds.
 
 \textbf{FedSGD/FedAVG with Noise}: clip the gradients/weights and add noise.
 
 DP is closely related to randomized smoothing. We add noise to data, then forward is \(\varepsilon\)-DP.
 
-\section{AI Regulation}
-
-Key issues: fairness, explainability, data minimization, unlearning (right to be forgotten), copyright.
-
-\section{Private synthetic data}
-
-Data is private, make DP synthetic proxy.
-
-1. \textbf{Select} marginal queries we want to measure\\
-2. \textbf{Measure} marginal queries using DP\\
-3. \textbf{Generate} synthetic data
-
-\textbf{Marginal} on \(C \subseteq \mathcal{A}\) (attrs.) is a vector \(\mu \in \mathbb{R}^{n_C}\),
-indexed by \(t \in \Omega_C\), where \(\Omega_C = \prod_{i \in C} \Omega_i\) and \(n_C = |\Omega_C|\).
-Each entry \(\mu_t\) is a count \(\sum_{x \in D} [x_C = t]\).
-\(M_C : \mathcal{D} \to \mathbb{R}^{n_C}, D \mapsto \mu\) computes the marginal.
-
-\(\Delta_2(M_C) = 1\) because adding a row in a dataset can only
-change one element of the vector.
-1-way marginals (\(n_C = 1\)) are histograms, 2-way marginals are heatmaps.
-
-Mutual information of two variables \(X, Y\) is \(\mathrm{I}(X, Y) = \sum_{x, y} \frac{p(x, y)}{p(x) p(y)}\).
-Chow-Liu algorithm makes a complete graph of features, edge weigths \(\mathrm{I}(X, Y)\).
-Find MST, the optimal 2nd-order approximation.
-Generate by sampling from MST, each node is conditioned on its parent, i.e.
-\(p(F_1 = f_1, F_2 = f_2, F_3 = f_3) = p(F_1 = f_1) p(F_2 = f_2 \mid F_1 = f_1) p(F_3 = f_3 \mid F_1 = f_1)\),
-if \(F_1\) is parent of \(F_2\) and \(F_3\).
-
-Add DP, i.e. add noise to every step of the algorithm.
-MST is done with the exponential mechanism, marginals are measured with Gaussian noise.
-
-\textbf{ProgSyn}: allows to specify constraints.
-\begin{itemize}
-    \item Sample random noise \(z \sim \mathcal{N}(0, I_p)\)
-    \item Pass \(z\) through a generative model \(g_\theta\)
-    \item Get synthetic dataset \(g_\theta(z)\)
-    \item Adapt \(\theta\) to make \(g_\theta(z)\) close to original \(X\)
-    \item Fine-tune \(g_\theta\) to make \(g_\theta(z)\) satisfy constraints
-\end{itemize}
-
 \section{Logic and Deep Learning (DL2)}
 
-\subsection{Querying Neural Networks}
-
-Use standard logic ($\forall, \exists, \land, \lor, f:\mathbb{R}^m \rightarrow \mathbb{R}^n,..$) and high-level queries to impose constraints.
-
-$(class(NN(i)) = 9) = \hspace*{-4mm} \bigwedge\limits_{j=1,j \neq 9}^k \hspace*{-4mm} NN(i)[j] < NN(i)[9]$
-
-Use translation $T$ of logical formulas into differentiable loss function $T(\phi)$ to be solved with gradient-based optimization to minimize $T(\phi)$. Regular SAT solvers can't handle non-small NNs.
+Use standard logic for constraints. Use translation $T$ of logic formulas into diffable loss func $T(\phi)$ to be solved with gradient-based optimization.
 
 \textbf{Theorem}: \mhl{$\forall x, T(\phi)(x) = 0 \Longleftrightarrow x \vDash \phi$}
 
 % \textbf{Logical Formula to Loss:
-\vspace*{-4mm}
 \begin{center}
 \renewcommand{\arraystretch}{1.1}
 \begin{tabular}{cc}
@@ -479,169 +405,9 @@ Use translation $T$ of logical formulas into differentiable loss function $T(\ph
 \vspace*{-4mm}
 
 By construction $T(\phi)(x) \geq 0, \forall x, \phi$.
-Negation can be implemented by using de Morgan's laws.
-
-\textbf{Box constraints:} hard to enforce in GD. Use L-BFGS-B and give box constraints to optimizer.
 
 \vspace*{1mm}
-\subsection{Training NN with Background Knowledge}
-\label{subsec:train_sat}
-
-Enforce logical property $\phi$ when training NN.
-
-\iffalse
-- Want cars to rather to be misclassified as truck than dog. $\forall z \in L_\infty(x, \epsilon). y = car \implies NN(z)[truck] > NN(z)[dog] + \delta$.
-
-- Semi-supervised learning, incorporate belief about unlabeled data.
-\fi
-
-\textbf{Problem statement:} find $\theta$ that maximizes the expected value of property  $\mathbb{E}_{s \sim D} [ \forall z . \phi(z, s, \theta) ]$.
-
-BUT: Universal quantifiers are difficult.
-
-\textbf{Reformulation:} get the worst violation of $\phi$ and minimize its effect, i.e.
-$\mathbb{E}_{s \sim D} [\max_z \neg \phi(z, s, \theta) ]$.
-
-\textbf{Reform. 2:} minimize
-\mhl{\(\mathbb{E}_{s \sim D}[T(\phi)(bz, s, \theta)]\)}, where \(bz = \mathrm{argmin}(T(\neg \phi)(z, s, \theta))\).
-This is an adv. attack.
-
-\(\exists\) different \(bz\) which minim. \(T(\neg \phi)\) which can produce different \(T(\phi)\).
-\(bz \neq\) worst example.
-
-Restrict $z$ to a convex set with efficient projs., i.e. \(L_\infty\)-balls.
-Remove the constraint from $\phi$ that restricts $z$ on the convex set and do PGD while projecting $z$ onto the convex set.
-
-\section{Fairness}
-
-A mapping \(M : \mathcal{X} \to \Delta(\mathcal{Y})\)
-is \((D, d)\)-\textbf{Lipschitz}, if for every \(x_1, x_2 \in \mathcal{X}\)
-\(D(M(x_1), M(x_2)) \leq d(x_1, x_2)\).
-If \(M\) is a model, it's \textbf{individually fair} wrt. \(D\) and \(d\).
-\(d\) is a distance in feature space, \(D\) is a metric on probability distributions.
-Choosing metrics is hard.
-
-Lemma: For \(h : \mathbb{R}^d \to [0, 1]\), \(x \mapsto \Phi^{-1}(\mathbb{E}_{\varepsilon \sim \mathcal{N}(0, I)}[h(x + \varepsilon)])\)
-is \(1\)-Lipschitz in \(x\).
-
-\extratext{
-\begin{itemize}
-    \item Preprocessing: debias the data.
-    \item Inprocessing: train the model differently.
-    \item Postprocessing: modify the output in inference.
-\end{itemize}
-}
-
-Let \(L \in \mathbb{R}\) be s.t. \(D(M(x), M(x')) \leq L d(x, x')\) (smaller value is stronger).
-Let \(d(x, x') \coloneqq (x - x')\tran S(x - x')\), where \(S\) is a symmetric positive definite covariance matrix.
-Let \(D(M(x), M(x')) \coloneqq [M(x) \neq M(x')]\).
-Then the Lipschitz property is equivalent to \(\forall \delta \in \mathbb{B}_S(0, 1 / L) \ \ M(x) = M(x + \delta)\),
-where \(||x||_S \coloneqq \sqrt{x\tran S x}\).
-We have reformulated individual fairness as robustness.
-
-\subsection{Fair Representation Learning}
-
-\extratext{
-Split the process into three parties.
-\begin{itemize}
-    \item Regulator: defines fairness criteria and data, verifies results.
-    \item Producer: trains an encoder into latent space \(L\).
-    \item Consumer: trains a decoder from \(L\) to output space.
-    Does not care about fairness concerns.
-\end{itemize}
-}
-
-FRL is often more efficient (reuse fair data) and simplifies audits.
-But it has less precise control of the fairness/performance tradeoff,
-is susceptible to adv. attacks by the consumer, can be expensive
-and provides no certification.
-
-\subsection{Learning Certified Individually Fair Representations}
-
-Keep pros of FRL, but also allow the regulator to certify the fairness of the E2E model
-and allows to define \(D\) and \(d\) via logical constraints that are accepted by MILP and DL2.
-Example: \(d(x, x') = \bigwedge_{i \in \mathrm{Cat} \setminus \{\mathrm{race}, \mathrm{gender}\}} (x_i = x_i')
-\bigwedge_{j \in \mathrm{Num}} |x_j - x_j'| \leq \alpha\).
-Logic captures cat. features exactly, norms don't.
-
-Let \(S_d(x)\) denote the set of all points similar to \(x\)
-and assume \(D(M(x), M(x')) = [M(x) \neq M(x')]\).
-
-The encoder \(f_\theta : \mathbb{R}^n \to \mathbb{R}^k\) is trained using DL2 s.t.
-\(\forall x' \in S_d(x) \ \ ||f_\theta(x) - f_\theta(x')||_\infty \leq \delta\).
-\(S_d(x)\) is a complicated set, which we bound by a box in latent space.
-The producer encodes \(S_d(x)\) and \(f_\theta\) as MILP to compute \(\varepsilon\) s.t.
-\(f_\theta(S_d(x)) \subseteq \{z' \mid ||f_\theta(x) - z'||_\infty \leq \varepsilon\}\),
-which gives the consumer a simple robustness problem.
-
-Train encoder using \ref{subsec:train_sat} with classifier to keep latent space useful.
-Train decoder via \ref{sec:randomized_smoothing}.
-
-\subsection{Latent Space Smoothing for individually Fair Representations}
-
-Use semantic feature space from a good gen. model encoder
-for similarity formulas for images etc.
-
-Center smoothing produces a bound on the radius of the ball in latent space.
-The E2E model is individually fair with probability \(1 - \alpha_{\mathrm{rs}} - \alpha_{\mathrm{cs}}\).
-
-\subsection{Group Fairness}
-
-\textbf{Demographic parity}: \(\mathbb{P}(\hat{Y} = 1 \mid G = 0) = \mathbb{P}(\hat{Y} = 1 \mid G = 1)\), where \(G\) is a group feature.
-
-\textbf{Equal opportunity}: \(\mathbb{P}(\hat{Y} = 1 \mid Y = 1, G = 0) = \mathbb{P}(\hat{Y} = 1 \mid Y = 1, G = 1)\)
-
-\textbf{Equalized odds}: Equal opportunity and \(\mathbb{P}(\hat{Y} = 1 \mid Y = 0, G = 0) = \mathbb{P}(\hat{Y} = 1 \mid Y = 0, G = 1)\)
-
-Example of \textbf{postprocessing}: for a binary classifier with output probability \(h(x)\).
-Use separate thresholds for each group, tuned to achieve group fairness.
-
-Example of \textbf{in-training}: add relaxed fairness constraints that are solved with DL2, i.e.
-\(-\varepsilon \leq \mathbb{P}(\hat{Y} = 1 \mid s = 0) - \mathbb{P}(\hat{Y} = 1 \mid s = 1) \leq \varepsilon\)
-
-\textbf{Preprocessing}: FRL.
-Notation: data \((x, s) \in \mathbb{R}^d \times \{0, 1\}\), encoder \(f : \mathbb{R}^d \times \{0, 1\} \to \mathbb{R}^{d'}, z = f(x, s)\),
-classifier \(g : \mathbb{R}^{d'} \to \{0, 1\}\),
-adversary \(h : \mathbb{R}^{d'} \to \{0, 1\}\) is a classifier that tries to predict the sensitive attribute from data in the latent space,
-\(Z_i \coloneqq \{z \mid s = i\}\), \(p_i(z) \coloneqq \mathbb{P}(z \mid s = i)\).
-
-\textbf{LAFTR}: jointly train \(f, g\) and \(h\). No guarantees.
-\(\min_{f, g} \max_{h}(\mathcal{L}_{clf}(f(x, s), g) - \gamma \mathcal{L}_{adv}(f(x, s), h))\)
-
-Use adversary to add guarantees by computing an upper bound on unfairness of any \(g\).
-Convert hard constraint (DP, EO) into a soft measure, e.g. for demographic parity:
-\(\Delta_{Z_0, Z_1}(g) \coloneqq |\mathbb{E}_{z \sim Z_0} g(z) - \mathbb{E}_{z \sim Z_1} g(z)|\), lower is better.
-Balanced accuracy is \(BA_{Z_0, Z_1}(h) = \frac{1}{2}(\mathbb{E}_{z \sim Z_0} (1 - h(z)) + \mathbb{E}_{z \sim Z_1} h(z)) =
-\frac{1}{2} \int_Z (p_0(z)(1 - h(z)) + p_1(z)h(z))\),
-\(h\) chooses \(p_0\) or \(p_1\).
-The optimal adversary is \(h^*(z) \coloneqq [p_1(z) \geq p_0(z)]\).
-Theorem: \(\Delta_{Z_0, Z_1}(g) \leq 2 \cdot BA_{Z_0, Z_1}(h^*) - 1\).
-We can't find neither \(BA\) nor \(h^*\) exactly.
-
-\textbf{Fair Normalizing Flows}: sample \(x\) from a known distribution \(q\), apply an \mhl{invertible} encoder \(z = f(x)\),
-find density of the new distribution by \(\log p(z) = \log q(f^{-1}(z)) + \log|\det \frac{\partial f^{-1}(z)}{\partial z}|\).
-Learn normalizing flows \(f_0\) and \(f_1\) as encoders for \(Z_0\) and \(Z_1\).
-This lets us find \(p_0(z)\) and \(p_1(z)\), given \(q_0(x), q_1(x)\).
-They can be estimated with density estimation, e.g. Gaussian Mixture Model.
-Given \(p_0(z), p_1(z)\), we estimate an UB of \(BA\) with probability \(1 - \varepsilon\)
-by Hoeffding's inequality, and then apply the theorem for UB of \(\Delta\).
-
-For good bounds, need low accuracy of \(h^* \Rightarrow\) low dist. between \(Z_0\) and \(Z_1\).
-Add \(KL\) divergence between \(p_0\) and \(p_1\) (and \(KL(p_1, p_0)\)) to loss of \(g\).
-\(g\) will be thrown away after training, as it exists only to increase utility of the flows.
-
-The bound holds only when the \(q\) estimates are accurate, which is a major limitation.
-
-\textbf{Fairness with Restricted Encoders}: restrict the space of representations to be finite.
-This allows to get the distribution of sensitive attributes at each \(z\), hence we have \(p_i(z)\).
-First, we bound \(P(s = i)\) using binom. conf. intervals,
-then per-cell balanced accuracy, then \(BA\). This is done on different datasets to achieve independence.
-% Then \(\varepsilon = \varepsilon_1 + \varepsilon_2 + \varepsilon_3\).
-
 \section{Appendix}
-
-\textbf{DM}: $\lnot(\phi \land \psi) = \lnot \phi \lor \lnot \psi$;
-$\lnot(\phi \lor \psi) = \lnot \phi \land \lnot \psi$
 
 $\mathbb{B}_\epsilon^1 \subseteq \mathbb{B}_\epsilon^2 \subseteq \mathbb{B}_\epsilon^\infty \subseteq \mathbb{B}_{\epsilon \sqrt{d}}^{2} \subseteq \mathbb{B}_{\epsilon \cdot d}^1$
 
@@ -672,7 +438,6 @@ $||x||_p = \big( \sum_{i=1}^d |x_i|^p \big)^{\frac{1}{p}}$ \quad $||x||_\infty =
 
 \textbf{CE loss:} $CE(\vec{z}, y) = - \sum_{c=1}^{K} \mathbbm{1}[c = y] \cdot \log z_c$
 
-\textbf{Implication:} $\phi \Rightarrow \psi \Longleftrightarrow \lnot \phi \lor \psi$
 
 \textbf{Gauss}: $\mathcal{N} = \frac{1}{\sqrt{(2\pi)^d |\Sigma|}}exp(-\frac{1}{2}(x-\mu)^T\Sigma^{-1} (x-\mu))$
 
@@ -685,9 +450,9 @@ $\Phi(x;\mu,b) = 0.5 + 0.5 \mathrm{sgn}(x - \mu)(1 - \exp(-\frac{|x-\mu|}{b}))$
 
 \textbf{Cauchy Schwarz:} $\langle x,y \rangle \leq ||x||_2 \cdot ||y||_2$
 
-\textbf{Holdners:} $||x \cdot y||_1 \leq ||x||_p \cdot ||y||_q$, if $\frac{1}{p} + \frac{1}{q} = 1$
+\textbf{Holders:} $||x \cdot y||_1 \leq ||x||_p \cdot ||y||_q$, if $\frac{1}{p} + \frac{1}{q} = 1$
 
-\textbf{Minmax:} $\max_a \min_b f(a,b) \leq \min_b \max_a f(a,b)$
+\textbf{Weak Duality:} $\max_a \min_b f(a,b) \leq \min_b \max_a f(a,b)$
 
 \subsection*{Variance \& Covariance}
 $\mathbb{V}(X){=}\mathbb{E}[(X{-}\mathbb{E}[X])^2]{=}\mathbb{E}[X^2]{-}\mathbb{E}[X]^2$\\
@@ -734,18 +499,6 @@ $\partial_X (\|\mathbf{X}\|_F^2) = 2\mathbf{X}$,
 
 \mbox{\fontsize{9.5}{6}\selectfont $\partial_x ||\mathbf{x}||_1 = \frac{\mathbf{x}}{|\mathbf{x}|}$,
 $\partial_x \|\mathbf{Ax - b}\|_2^2 = \mathbf{2(A^\top Ax-A^\top b)}$},
-
-\subsection*{MILP encodings}
-
-$y = |x|, l \leq x \leq u$: $y \geq x, y \geq -x$,
-
-$y \leq -x + a \cdot 2u, y \leq x - (1-a) \cdot 2l$, $a \in \{0,1\}$
-
-$y = \max(x_1, x_2), l_1 \leq x_1 \leq u_1, l_2 \leq x_2 \leq u_2$:
-
-$y \geq x_1, y \geq x_2$, $y \leq x_1 + a \cdot (u_2 - l_1)$,
-
-$y \leq x_2 + (1 - a) \cdot (u_1 - l_2), a \in \{0,1\}$
 
 
 
